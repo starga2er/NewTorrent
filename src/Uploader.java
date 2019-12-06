@@ -3,6 +3,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 
 public class Uploader extends Thread {
     private Peer peer;
@@ -53,17 +55,38 @@ public class Uploader extends Thread {
                                     System.out.println(peer.PeerNum + " send finish");
                                 }
                             }
+                            if (loop)
+                                Thread.sleep(5000);
                         }
                     } else {
                         System.out.println("Error : check ");
                     }
-                    connectionSocket.close();
+                    //inputClient.close();
+                    //outputClient.close();
+
+                    // connectionSocket.close();
                 } else {
                     outputClient.writeInt(-1);
                 }
+                inputClient.close();
+                outputClient.close();
+
+                connectionSocket.close();
                 System.out.println(peer.PeerNum + " Server disconnect " + connectionSocket.getPort());
-            }catch (Exception e){
-                e.printStackTrace();
+            } catch(SocketException e ){
+                System.out.println(peer.PeerNum + " Server disconnect " + connectionSocket.getPort());
+            }
+            catch ( SocketTimeoutException e ){
+                System.out.println("TIME OUT!!! " + peer.PeerNum + " Server disconnect " + connectionSocket.getPort());
+            }
+            catch (Exception e){
+                if(!connectionSocket.isClosed()) {
+                    try {
+                        connectionSocket.close();
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
+                }
             }
         }
     }

@@ -9,7 +9,6 @@ public class Peer {
     byte[] checkChunk;
     boolean isLockChuck;
     boolean isLockFile;
-    boolean isLockClock;
     File downloadFile;
     RandomAccessFile randomFile;
     boolean downloadAll;
@@ -17,12 +16,11 @@ public class Peer {
     int PortNum;
 
     InfoPeer[] friendsList;
-    boolean[] friendsCheckList;
     volatile int friendsClock;
 
     public Peer(int number, String fileName, String fileType, InfoPeer[] list) throws FileNotFoundException {
         PeerNum = number;
-        isLockChuck = isLockFile = isLockClock = false;
+        isLockChuck = isLockFile = false;
         downloadFile = new File(fileName + number + "."+ fileType);
         if (downloadFile.exists()){
             downloadAll = true;
@@ -36,8 +34,6 @@ public class Peer {
         int j = 0;
         friendsClock = -1;
         friendsList = new InfoPeer[4];
-        friendsCheckList = new boolean[4];
-        Arrays.fill(friendsCheckList, false);
         for (; i< 5 ; i++){
             if (PeerNum == i){
                 PortNum = list[i].peerPort;
@@ -66,18 +62,6 @@ public class Peer {
             wait();
         }
         isLockChuck = true;
-    }
-
-    public synchronized void useClock() throws InterruptedException {
-        while (isLockClock){
-            wait();
-        }
-        isLockClock = true;
-    }
-
-    public synchronized void releaseClock() {
-        isLockClock = false;
-        notifyAll();
     }
 
     public synchronized void releaseCheckChunk() {
@@ -121,17 +105,8 @@ public class Peer {
     }
 
     public synchronized int useFriendList() {
-
-        do {
-            friendsClock = (friendsClock+1)%4;
-        } while (friendsCheckList[friendsClock]);
-        friendsCheckList[friendsClock] = true;
-
+        friendsClock = (friendsClock+1)%4;
         return friendsClock;
-    }
-
-    public synchronized void releaseFriendList(int index) {
-        friendsCheckList[index] = false;
     }
 
 }

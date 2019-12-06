@@ -26,9 +26,13 @@ public class Torrent {
             peers[i] = new Peer(i, fileName, fileType, peersList);
             uploadList[i] = new Uploader(peers[i]);
             uploadList[i].start();
-            downloadList[i] = new Downloader(peers[i]);
-            for (int j = 0 ; j < 1; j++) // 1모드
-                new Thread(downloadList[i]).start();
+        }
+
+        for (int i = 0 ; i < 5; i++){
+            // downloadList[i] = new Downloader(peers[i]);
+            for (int j = 0 ; j < 3; j++) // 싱글 스레드
+                // new Thread(downloadList[i]).start();
+                new Thread(new Downloader(peers[i])).start();
         }
     }
 }

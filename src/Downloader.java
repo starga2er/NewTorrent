@@ -2,6 +2,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 
 public class Downloader implements Runnable{
     Peer peer;
@@ -26,18 +28,27 @@ public class Downloader implements Runnable{
         int nowPeer = 0;
         while (!peer.downloadAll){
             try{
-                // peer.useClock();
-                nowPeer = peer.useFriendList();
-                // peer.releaseClock();
-                clientSocket = new Socket(peer.friendsList[nowPeer].peerIP, peer.friendsList[nowPeer].peerPort);
-                clientSocket.setSoTimeout(10000);
-                while (!clientSocket.isConnected()){
-                    Thread.sleep(100);
+                while (true) {
+                    clientSocket = null;
+                    inputServer = null;
+                    outputServer = null;
+                    try {
+                        nowPeer = peer.useFriendList();
+                        clientSocket = new Socket(peer.friendsList[nowPeer].peerIP, peer.friendsList[nowPeer].peerPort);
+                        clientSocket.setSoTimeout(10000);
+                        break;
+                    } catch ( Exception e ){
+                        System.out.println(" Error ");
+                        // peer.releaseFriendList(nowPeer);
+                    }
+                }
+
+                while (clientSocket.isClosed()) {
+                    System.out.println("wait");
                 }
                 System.out.println(peer.PeerNum + " Client connect : " + clientSocket.getPort() + " / " + clientSocket.getLocalPort());
                 inputServer = new DataInputStream(clientSocket.getInputStream());
                 outputServer = new DataOutputStream(clientSocket.getOutputStream());
-                while (inputServer.available() != 4){}
                 int check = inputServer.readInt();
 
                 if (check != -1){
@@ -90,12 +101,26 @@ public class Downloader implements Runnable{
                     peer.releaseCheckChunk();
 
 
-                } else {
-                    clientSocket.close();
                 }
+                inputServer.close();
+                outputServer.close();
+                clientSocket.close();
                 System.out.println(peer.PeerNum + " Client disconnect " + clientSocket.getLocalPort());
-            } catch (Exception e){
-                System.out.println(peer.PeerNum + " | error");
+
+            } catch ( SocketException e ){
+                System.out.println(peer.PeerNum + " Client disconnect " + clientSocket.getLocalPort());
+            } catch ( SocketTimeoutException e ){
+                System.out.println("TIME OUT!!! " + peer.PeerNum + " Client disconnect " + clientSocket.getLocalPort());
+                if (!clientSocket.isClosed()){
+                    try {
+                        clientSocket.close();
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            }
+            catch (Exception e){
+                System.out.println(peer.PeerNum + " | error " + clientSocket.getLocalPort() + " / ");
                 e.printStackTrace();
                 try {
                     if (clientSocket.isConnected())
@@ -105,9 +130,10 @@ public class Downloader implements Runnable{
                 }
 
             } finally {
-                peer.releaseFriendList(nowPeer);
+                // peer.releaseFriendList(nowPeer);
             }
         }
+        System.out.println((peer.PeerNum + " is download all!"));
     }
 
 }
